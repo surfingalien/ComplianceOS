@@ -1,0 +1,14 @@
+services:
+  app:
+    build: .
+    container_name: compliance-neuralink
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: sqlite:////app/data/compliance_neuralink.db
+    volumes:
+      - compliance_data:/app/data
+    restart: unless-stopped
+
+volumes:
+  compliance_data:
