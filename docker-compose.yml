@@ -1,0 +1,15 @@
+services:
+  app:
+    build: .
+    container_name: compliance-os
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: sqlite:////app/data/compliance_os.db
+      AUTH_ENABLED: "false"
+    volumes:
+      - compliance_data:/app/data
+    restart: unless-stopped
+
+volumes:
+  compliance_data:
