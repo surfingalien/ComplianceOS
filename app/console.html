@@ -1,0 +1,142 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>CompOS Full Console</title>
+<style>
+body{background:#0b1220;color:#e5eef8;font-family:Inter,Arial,sans-serif;margin:0}
+header{padding:18px 22px;border-bottom:1px solid #243044;background:#111827}
+h1{margin:0;font-size:20px}
+.container{padding:22px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:20px}
+.card{background:#111827;border:1px solid #243044;border-radius:12px;padding:14px}
+.label{color:#94a3b8;font-size:12px}
+.value{font-size:24px;font-weight:700;margin-top:6px}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px}
+button{background:#1d4ed8;color:#fff;border:0;border-radius:8px;padding:9px 12px;cursor:pointer}
+button:hover{background:#1e40af}
+button.secondary{background:#1f2937}
+pre{background:#111827;border:1px solid #243044;border-radius:12px;padding:16px;white-space:pre-wrap;font-size:12px;color:#93c5fd}
+</style>
+</head>
+<body>
+<header>
+  <h1>CompOS Full Integrated Console</h1>
+  <p style="margin:6px 0 0;color:#94a3b8;font-size:13px">
+    Full feature integration: compliance foundation, AI workflows, governance, MCP, Neuralink Brain.
+  </p>
+</header>
+
+<div class="container">
+  <div class="actions">
+    <button onclick="seed()">1. Seed Full System</button>
+    <button class="secondary" onclick="metrics()">2. Load Metrics</button>
+    <button class="secondary" onclick="runConnector('aws')">Run AWS Connector</button>
+    <button class="secondary" onclick="runConnector('okta')">Run Okta Connector</button>
+    <button class="secondary" onclick="runConnector('github')">Run GitHub Connector</button>
+    <button class="secondary" onclick="seedTest()">Seed Default Test</button>
+    <button class="secondary" onclick="generatePolicy()">Generate Policy AI</button>
+    <button class="secondary" onclick="processQuestionnaire()">Process Questionnaire AI</button>
+    <button class="secondary" onclick="startDsar()">Start GDPR DSAR</button>
+    <button class="secondary" onclick="advanceDsar()">Advance DSAR</button>
+    <button class="secondary" onclick="triageIncident()">Triage Incident</button>
+    <button class="secondary" onclick="crawlRadar()">Crawl Reg Radar</button>
+    <button class="secondary" onclick="generateReport()">Generate Executive Report</button>
+    <button class="secondary" onclick="mcpTools()">MCP Tools</button>
+    <button class="secondary" onclick="anomalies()">Brain Anomalies</button>
+  </div>
+
+  <div class="grid" id="metrics"></div>
+
+  <h3>Output</h3>
+  <pre id="output">Click a button to run a feature.</pre>
+</div>
+
+<script>
+async function api(path, opts={}) {
+  const res = await fetch(path, Object.assign({headers: {"Content-Type": "application/json"}}, opts));
+  return res.json();
+}
+
+function show(data) {
+  document.getElementById("output").textContent = JSON.stringify(data, null, 2);
+}
+
+async function seed() {
+  show(await api("/v1/seed/full", {method: "POST"}));
+}
+
+async function metrics() {
+  const data = await api("/v1/brain/metrics");
+  document.getElementById("metrics").innerHTML = Object.entries(data)
+    .map(([k, v]) => `<div class="card"><div class="label">${k}</div><div class="value">${v}</div></div>`)
+    .join("");
+  show(data);
+}
+
+async function runConnector(name) {
+  show(await api(`/v1/connectors/${name}/run`, {method: "POST"}));
+}
+
+async function seedTest() {
+  const test = await api("/v1/tests/seed-default", {method: "POST"});
+  const run = await api(`/v1/tests/${test.id}/run`, {method: "POST"});
+  show({test, run});
+}
+
+async function generatePolicy() {
+  show(await api("/v1/policies/generate", {method: "POST"}));
+}
+
+async function processQuestionnaire() {
+  const list = await api("/v1/questionnaires");
+  if (!list.length) {
+    show({error: "No questionnaire found. Click Seed Full System first."});
+    return;
+  }
+  show(await api(`/v1/questionnaires/${list[0].id}/process`, {method: "POST"}));
+}
+
+async function startDsar() {
+  show(await api("/v1/dsar/start", {
+    method: "POST",
+    body: JSON.stringify({request_type: "access", requester_email: "user@example.com"})
+  }));
+}
+
+async function advanceDsar() {
+  const list = await api("/v1/dsar");
+  if (!list.length) {
+    show({error: "No DSAR found. Click Start GDPR DSAR first."});
+    return;
+  }
+  show(await api(`/v1/dsar/${list[0].id}/advance`, {method: "POST"}));
+}
+
+async function triageIncident() {
+  const incidents = await api("/v1/incidents");
+  if (!incidents.length) {
+    show({error: "No incident found. Click Seed Full System first."});
+    return;
+  }
+  show(await api(`/v1/incidents/${incidents[0].id}/triage`, {method: "POST"}));
+}
+
+async function crawlRadar() {
+  show(await api("/v1/reg-radar/crawl", {method: "POST"}));
+}
+
+async function generateReport() {
+  show(await api("/v1/reports/generate", {method: "POST"}));
+}
+
+async function mcpTools() {
+  show(await api("/v1/mcp/tools"));
+}
+
+async function anomalies() {
+  show(await api("/v1/brain/anomalies"));
+}
+</script>
+</body>
+</html>

@@ -1,308 +1,121 @@
-# ComplianceOS — Compliance Neuralink AI Brain
+# ComplianceOS — Full Integrated Platform
 
-A deployable compliance operating system starter with a central **Neuralink AI Brain** for tracking, monitoring, correlation, and flow observability.
+A single deployable reference implementation that wires together a full compliance
+platform: control framework, evidence collection, control testing, AI-assisted
+policy and questionnaire generation, GDPR DSAR workflows, incident response tied
+to a 50-state breach notification matrix, regulatory change radar, vendor risk,
+executive reporting, an MCP tool surface, and a central **Neuralink Brain**
+telemetry layer for tracking, correlation, and anomaly detection.
 
-This repository provides a runnable MVP for:
-
-- multi-tenant compliance objects,
-- control catalog,
-- evidence collection,
-- evidence hashing,
-- evidence quality scoring,
-- control tests,
-- gap creation,
-- expert review console,
-- telemetry event tracking,
-- flow correlation by correlation ID,
-- monitoring dashboard.
-
----
-
-## Architecture
-
-```mermaid
-flowchart TB
-    subgraph Client
-      UI[Dashboard]
-      APIConsumer[API / SDK / MCP Clients]
-    end
-
-    subgraph Application
-      FastAPI[FastAPI Application]
-      Brain[Neuralink AI Brain]
-      Modules[Compliance Modules]
-      Middleware[Telemetry Middleware]
-    end
-
-    subgraph Data
-      DB[(SQL Database)]
-      Events[Telemetry Events]
-    end
-
-    UI --> FastAPI
-    APIConsumer --> FastAPI
-    FastAPI --> Middleware
-    Middleware --> Brain
-    FastAPI --> Modules
-    Modules --> DB
-    Modules --> Brain
-    Brain --> Events
-    Events --> DB
-```
-
----
-
-## Core Flows
-
-### Evidence to Control Test Flow
-
-```mermaid
-sequenceDiagram
-    participant Client
-    participant API
-    participant EvidenceService
-    participant TestingService
-    participant Brain
-
-    Client->>API: Create Control
-    API->>Brain: control.created
-    Client->>API: Create Evidence
-    API->>EvidenceService: Store + Hash Evidence
-    EvidenceService->>Brain: evidence.collected
-    Client->>API: Create Test
-    API->>Brain: test.created
-    Client->>API: Run Test
-    API->>TestingService: Evaluate Evidence
-    TestingService->>Brain: test.run.completed
-    alt Test Failed
-        TestingService->>Brain: gap.created
-    end
-    API-->>Client: Test Result
-```
-
-### Expert Review Flow
-
-```mermaid
-sequenceDiagram
-    participant RegRadar
-    participant ReviewConsole
-    participant Reviewer
-    participant Brain
-
-    RegRadar->>ReviewConsole: Create review item
-    ReviewConsole->>Brain: review_item.created
-    Reviewer->>ReviewConsole: Review item
-    Reviewer->>ReviewConsole: Approve / Reject
-    ReviewConsole->>Brain: review_item.decided
-```
-
-### Neuralink Brain Correlation Flow
-
-```mermaid
-sequenceDiagram
-    participant Client
-    participant Middleware
-    participant DomainService
-    participant Brain
-
-    Client->>Middleware: API Request
-    Middleware->>Brain: request.started
-    Middleware->>DomainService: Execute action
-    DomainService->>Brain: domain.event
-    DomainService-->>Middleware: Result
-    Middleware->>Brain: request.completed
-    Middleware-->>Client: Response + X-Correlation-ID
-```
-
----
+External connectors (AWS, Okta, GitHub, HR) are implemented as a connector
+framework with local simulated responses, so the whole system runs immediately
+with no external credentials. Swap `simulate_connector()` in `app/main.py` for
+real API calls when you're ready to point it at live systems.
 
 ## Project Structure
 
 ```text
 ComplianceOS/
 ├── app/
-│   └── main.py
-├── scripts/
-│   ├── init_postgres_rls.sql
-│   └── load_test_k6.js
+│   ├── main.py          # FastAPI app: all models, routes, business logic
+│   └── console.html     # Built-in operator console (single-page UI)
+├── sdk/
+│   ├── python_client.py # Python SDK
+│   └── ts_client.ts     # TypeScript SDK
+├── tests/
+│   ├── load_test_k6.js  # k6 load test
+│   └── rls_audit.sql    # PostgreSQL row-level-security audit + example policies
+├── requirements.txt
 ├── Dockerfile
 ├── docker-compose.yml
-├── requirements.txt
 └── README.md
 ```
 
----
-
-## Local Setup
-
-### 1. Create virtual environment
+## Run Locally
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-```
-
-### 2. Install dependencies
-
-```bash
 pip install -r requirements.txt
-```
-
-### 3. Run API
-
-```bash
 uvicorn app.main:app --reload
 ```
 
-### 4. Open dashboard
+Open `http://localhost:8000`.
 
-```text
-http://localhost:8000
-```
-
-### 5. Seed demo data
-
-Click **Seed Demo Data** in the dashboard, or run:
-
-```bash
-curl -X POST http://localhost:8000/v1/seed/demo
-```
-
----
-
-## Docker Deployment
-
-Build and run:
+## Run with Docker
 
 ```bash
 docker compose up --build
 ```
 
-Open:
+## First Steps
 
-```text
-http://localhost:8000
+Click through the console buttons in order the first time:
+
+1. **Seed Full System** — creates the default tenant, frameworks (SOC 2, ISO
+   27001, HIPAA, GDPR), the control catalog with framework mappings, the
+   50-state breach notification matrix, the answer library, regulatory
+   sources, and one sample questionnaire/incident/vendor/audit engagement.
+2. **Load Metrics** — pulls live counts from the Neuralink Brain.
+3. **Run AWS / Okta / GitHub Connector** — simulates evidence collection and
+   scores the resulting evidence.
+4. **Seed Default Test** — creates and immediately runs a control test against
+   the Okta evidence.
+5. **Generate Policy AI** — drafts a policy document from the current control
+   catalog.
+6. **Process Questionnaire AI** — answers the seeded questionnaire from the
+   answer library using confidence-scored retrieval.
+7. **Start GDPR DSAR** / **Advance DSAR** — walks a 10-step GDPR DSAR workflow,
+   attaching evidence to each completed step.
+8. **Triage Incident** — matches the seeded incident's affected states against
+   the breach matrix to compute legal obligations.
+9. **Crawl Reg Radar** — simulates detecting regulatory updates and files them
+   for expert review.
+10. **Generate Executive Report** — rolls up controls, gaps, and evidence into
+    a readiness score.
+11. **MCP Tools** / **Brain Anomalies** — inspect the MCP tool catalog and the
+    Brain's request-volume anomaly detector.
+
+## Authentication
+
+Authentication is disabled by default (`AUTH_ENABLED=false`), so every request
+uses a single default tenant with full scope — convenient for local
+evaluation. Set `AUTH_ENABLED=true` and pass an `X-API-Key` header (seeded as
+`demo-key` after running the full seed) plus an `X-Tenant-ID` header to
+exercise the scoped multi-tenant path.
+
+## API Docs
+
+- Swagger UI: `http://localhost:8000/docs` (loads its UI from a CDN; won't
+  render in network-restricted sandboxes, but works in any normal deployment)
+- OpenAPI JSON: `http://localhost:8000/v1/platform/openapi`
+
+## SDKs
+
+`sdk/python_client.py` and `sdk/ts_client.ts` wrap the REST API with
+typed/convenience methods. The Python client needs `requests`
+(`pip install requests`) — it's a separate consumer-side dependency, not
+part of the server's `requirements.txt`.
+
+## Load Testing & RLS Audit
+
+```bash
+k6 run tests/load_test_k6.js
 ```
 
----
-
-## API Endpoints
-
-### Health
-
-```text
-GET /health
-GET /v1/brain/health
-```
-
-### Tenants
-
-```text
-POST /v1/tenants
-GET  /v1/tenants
-```
-
-### Controls
-
-```text
-POST /v1/controls
-GET  /v1/controls
-```
-
-### Evidence
-
-```text
-POST /v1/evidence
-GET  /v1/evidence
-```
-
-### Tests
-
-```text
-POST /v1/tests
-GET  /v1/tests
-POST /v1/tests/{test_id}/run
-```
-
-### Gaps
-
-```text
-GET /v1/gaps
-```
-
-### Expert Review Console
-
-```text
-POST /v1/review-console/items
-GET  /v1/review-console/items
-POST /v1/review-console/items/{item_id}/decision
-```
-
-### Neuralink Brain
-
-```text
-GET /v1/brain/events
-GET /v1/brain/flows/{correlation_id}
-GET /v1/brain/metrics
-```
-
----
-
-## Monitoring Dashboard
-
-The dashboard shows:
-
-- tenant count,
-- control count,
-- evidence count,
-- tests count,
-- test runs,
-- gaps,
-- review items,
-- telemetry events,
-- event counts by flow,
-- event counts by status.
-
----
+`tests/rls_audit.sql` lists the current row-level-security state on Postgres
+and includes example tenant-isolation policies to apply before going to
+production with a shared Postgres database.
 
 ## Production Checklist
 
-Before production deployment, add:
-
-1. Authentication and authorization.
-2. OAuth2 / OIDC with scope enforcement.
-3. PostgreSQL with row-level security.
-4. Secrets manager.
-5. HTTPS/TLS.
-6. Rate limiting.
-7. Audit log immutability.
-8. Object storage for raw evidence.
-9. Background workers for connectors.
-10. AI gateway with prompt logging.
-11. Vector database for answer-library retrieval.
-12. Webhook delivery retry and DLQ.
-13. OpenTelemetry integration.
-14. Backup and disaster recovery.
-15. Load testing and chaos testing.
-
----
-
-## Notes
-
-This is a deployable starter system.
-
-For a full enterprise platform, expand each module into dedicated services:
-
-- Control Service,
-- Evidence Service,
-- Testing Service,
-- Policy Service,
-- Questionnaire Service,
-- Auditor Service,
-- Trust Center Service,
-- Privacy Service,
-- Vendor Risk Service,
-- Regulatory Radar Service,
-- Incident Service,
-- Reporting Service,
-- Neuralink Brain Service.
+- Switch `DATABASE_URL` to PostgreSQL and apply the RLS policies from
+  `tests/rls_audit.sql`.
+- Set `AUTH_ENABLED=true` and issue real per-tenant API keys.
+- Replace the simulated connectors with real AWS/Okta/GitHub/HR integrations.
+- Put a real secrets manager, TLS termination, and rate limiting in front of
+  the API.
+- Move evidence payloads to object storage instead of inline JSON columns.
+- Add OpenTelemetry export alongside (or instead of) the built-in Neuralink
+  Brain telemetry table.
+- Add backup/disaster recovery for the database.
